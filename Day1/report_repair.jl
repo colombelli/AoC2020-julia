@@ -20,6 +20,9 @@ input = read_input()
 
 
 #=
+
+PART 1
+
 Before you leave, the Elves in accounting just need you to fix your 
 expense report (your puzzle input); apparently, something isn't quite adding up.
 Specifically, they need you to find the two entries that sum to 2020 and then 
@@ -103,7 +106,7 @@ end
 # -1: result is impossible for given array
 function downward_flow(array,i,j,columns_idx,rows_idx)
 
-    while((i<=last(rows_idx)) && (j<=last(columns_idx)))
+    while(j<=last(columns_idx))
         result = check_sum(array[rows_idx[i]], array[columns_idx[j]])
         if result == 0
             return array[rows_idx[i]] * array[columns_idx[j]]
@@ -138,18 +141,7 @@ function downward_flow(array,i,j,columns_idx,rows_idx)
         end
     end
 
-    if j<last(columns_idx)
-    # Check right up diagonal
-        result = check_sum(array[rows_idx[i-1]], array[columns_idx[j+1]])
-        if result == 0
-            return array[rows_idx[i]] * array[columns_idx[j]] end
-    # Check right
-        result = check_sum(array[rows_idx[i]], array[columns_idx[j+1]])
-        if result == 0
-            return array[rows_idx[i]] * array[columns_idx[j]] end
-
-
-    elseif i<last(rows_idx)
+    if i<last(rows_idx)
     # Walks horizontally through the whole last line of the matrix
         i = size(rows_idx,1)
         j = 1
@@ -178,4 +170,68 @@ if result == -1
     end
 else
     println(result)
+end
+
+
+
+#=
+
+PART 2
+
+The Elves in accounting are thankful for your help; one of them even offers you 
+a starfish coin they had left over from a past vacation. They offer you a second 
+one if you can find three numbers in your expense report that meet the same criteria.
+
+Using the above example again, the three entries that sum to 2020 are 979, 366, and 
+675. Multiplying them together produces the answer, 241861950.
+
+In your expense report, what is the product of the three entries that sum to 2020?
+
+=# 
+
+
+# -1: sum is smaller than the expected sum
+# 0: sum is the expected sum
+# 1: sum is larger than the expected sum
+function check_sum(a::Int32, b::Int32, c::Int32)::Int8
+    s::Int32 = a+b+c
+    if s > EXPECTED_SUM
+        return 1
+    elseif s < EXPECTED_SUM
+        return -1
+    else
+        println("Found solution: ", a, " and ", b)
+        return 0
+    end
+end
+
+
+function search_sum(input)
+# Dont know how to optimize significantly.. it's gonna be O(n^3)
+    for i in 1:size(input,1)
+        for j in 1:size(input,1)
+            if j == i
+                continue 
+            end
+            for k in 1:size(input,1)
+                if k == i || k == j
+                    continue 
+                end
+                
+                result = check_sum(input[i], input[j], input[k])
+                if result == 0
+                    println("Success in the 3 number sum search: ", input[i], ", ", input[j], " and ", input[k])
+                    return input[i] * input[j] * input[k]
+                end
+            end
+        end
+    end
+    return -1
+end
+
+result = search_sum(input)
+if result == -1
+    println("3 digits sum not found in given array!")
+else
+    println("Result: ", result)
 end
