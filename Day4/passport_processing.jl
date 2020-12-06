@@ -99,3 +99,223 @@ println("Total passports: ", length(passports))
 println("Valid passports found: ", count_valid_passports(passports))
 
 
+
+
+
+#=
+--- Part Two ---
+
+The line is moving more quickly now, but you overhear airport security talking about how passports with invalid data are getting through. Better add some data validation, quick!
+
+You can continue to ignore the cid field, but each other field has strict rules about what values are valid for automatic validation:
+
+    byr (Birth Year) - four digits; at least 1920 and at most 2002.
+    iyr (Issue Year) - four digits; at least 2010 and at most 2020.
+    eyr (Expiration Year) - four digits; at least 2020 and at most 2030.
+    hgt (Height) - a number followed by either cm or in:
+        If cm, the number must be at least 150 and at most 193.
+        If in, the number must be at least 59 and at most 76.
+    hcl (Hair Color) - a # followed by exactly six characters 0-9 or a-f.
+    ecl (Eye Color) - exactly one of: amb blu brn gry grn hzl oth.
+    pid (Passport ID) - a nine-digit number, including leading zeroes.
+    cid (Country ID) - ignored, missing or not.
+
+Your job is to count the passports where all required fields are both present and valid according to the above rules. Here are some example values:
+
+byr valid:   2002
+byr invalid: 2003
+
+hgt valid:   60in
+hgt valid:   190cm
+hgt invalid: 190in
+hgt invalid: 190
+
+hcl valid:   #123abc
+hcl invalid: #123abz
+hcl invalid: 123abc
+
+ecl valid:   brn
+ecl invalid: wat
+
+pid valid:   000000001
+pid invalid: 0123456789
+
+Here are some invalid passports:
+
+eyr:1972 cid:100
+hcl:#18171d ecl:amb hgt:170 pid:186cm iyr:2018 byr:1926
+
+iyr:2019
+hcl:#602927 eyr:1967 hgt:170cm
+ecl:grn pid:012533040 byr:1946
+
+hcl:dab227 iyr:2012
+ecl:brn hgt:182cm pid:021572410 eyr:2020 byr:1992 cid:277
+
+hgt:59cm ecl:zzz
+eyr:2038 hcl:74454a iyr:2023
+pid:3556412378 byr:2007
+
+Here are some valid passports:
+
+pid:087499704 hgt:74in ecl:grn iyr:2012 eyr:2030 byr:1980
+hcl:#623a2f
+
+eyr:2029 ecl:blu cid:129 byr:1989
+iyr:2014 pid:896056539 hcl:#a97842 hgt:165cm
+
+hcl:#888785
+hgt:164cm byr:2001 iyr:2015 cid:88
+pid:545766238 ecl:hzl
+eyr:2022
+
+iyr:2010 hgt:158cm hcl:#b6652a ecl:blu byr:1944 eyr:2021 pid:093154719
+
+Count the number of valid passports - those that have all required fields and valid values. Continue to treat cid as optional. In your batch file, how many passports are valid?
+=#
+
+
+function generate_dict_for_each_passport(passports::Array{String})::Array{Dict{String,String}}
+
+    passports_dict::Array{Dict{String,String}} = []
+    for passport in passports
+        
+        passport_dict::Dict{String,String} = Dict()
+        fields = split(passport," ")
+        for field in fields
+            key_value = split(field,":")
+            passport_dict[key_value[1]] = key_value[2]
+        end
+        push!(passports_dict, passport_dict)
+    end
+    return passports_dict
+end
+
+
+function validate_n_digit_number(value::String, n::Int, lower_bound::Int, upper_bound::Int)::Bool
+    if length(value) != n
+        return false end
+    
+    value_int = tryparse(Int32,value)
+    if value_int == nothing
+        return false end
+
+    if (value_int < lower_bound) || (value_int > upper_bound)
+        return false end 
+    
+    return true
+end
+
+
+function validate_byr(passport_dict::Dict{String,String})::Bool
+    #byr (Birth Year) - four digits; at least 1920 and at most 2002.
+    if !haskey(passport_dict,"byr") 
+        return false end
+    byr = passport_dict["byr"]
+    return validate_n_digit_number(byr, 4, 1920, 2002)
+end
+
+
+function validate_iyr(passport_dict::Dict{String,String})::Bool
+    #iyr (Issue Year) - four digits; at least 2010 and at most 2020.
+    if !haskey(passport_dict,"iyr") 
+        return false end
+    iyr = passport_dict["iyr"]
+    return validate_n_digit_number(iyr, 4, 2010, 2020)
+end
+
+
+function validate_eyr(passport_dict::Dict{String,String})::Bool
+    #eyr (Expiration Year) - four digits; at least 2020 and at most 2030.
+    if !haskey(passport_dict,"eyr") 
+        return false end
+    eyr = passport_dict["eyr"]
+    return validate_n_digit_number(eyr, 4, 2020, 2030) 
+end
+
+
+function validate_pid(passport_dict::Dict{String,String})::Bool
+    #pid (Passport ID) - a nine-digit number, including leading zeroes.
+    if !haskey(passport_dict,"pid") 
+        return false end
+    pid = passport_dict["pid"]
+    return validate_n_digit_number(pid, 9, 000000000, 999999999) 
+end
+
+
+function validate_hgt(passport_dict::Dict{String,String})::Bool
+    # hgt (Height) - a number followed by either cm or in:
+    #  - If cm, the number must be at least 150 and at most 193.
+    #  - If in, the number must be at least 59 and at most 76.
+
+    if !haskey(passport_dict,"hgt") 
+        return false end
+    hgt = passport_dict["hgt"]
+    metric = hgt[end-1:end]
+
+    if metric == "cm"
+        return validate_n_digit_number(hgt[1:end-2], 3, 150, 193)
+    elseif metric == "in"
+        return validate_n_digit_number(hgt[1:end-2], 2, 59, 76)
+    else
+        return false 
+    end
+end
+
+
+function validate_hcl(passport_dict::Dict{String,String})::Bool
+    #hcl (Hair Color) - a # followed by exactly six characters 0-9 or a-f.
+    if !haskey(passport_dict,"hcl") 
+        return false end
+    hcl = passport_dict["hcl"]
+    
+    if hcl[1] != '#'
+        return false end
+    
+    for hex_unit in hcl[2:end]
+        hex_unit = Int(hex_unit)
+        if !(hex_unit>=48 && hex_unit<=57) && !(hex_unit>=97 && hex_unit<=102)
+            return false end
+    end
+    return true
+end
+
+
+function validate_ecl(passport_dict::Dict{String,String})::Bool
+    #ecl (Eye Color) - exactly one of: amb blu brn gry grn hzl oth.
+    valid_ecls::Array{String} = ["amb","blu","brn","gry","grn","hzl","oth"]
+    if !haskey(passport_dict,"ecl") 
+        return false end
+    ecl = passport_dict["ecl"]
+    if !(ecl in valid_ecls)
+        return false end
+    return true
+end
+
+
+
+function validate_pass_fields(passport::Dict{String,String})::Bool
+
+    validation_foos = [ validate_byr,validate_ecl,validate_eyr,validate_hcl,
+                        validate_hgt,validate_pid,validate_iyr]
+
+    for foo in validation_foos
+        if !foo(passport)
+            return false end
+    end
+    return true
+end
+
+function count_valid_passports(passports::Array{Dict{String,String}})::Int32
+    valid_count = 0
+    for passport in passports
+        if validate_pass_fields(passport)
+            valid_count +=1 end
+    end
+    return valid_count
+end
+
+
+passports = generate_dict_for_each_passport(passports)
+valid_count = count_valid_passports(passports)
+println("Valid passports considering field rules: ", valid_count)
